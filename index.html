@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VEX Push Back Team Scouting</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 40px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+
+    a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+<h1>VEX V5 Push Back Team Scout</h1>
+<p>Enter a team number to pull stats and videos.</p>
+
+<input id="teamInput" placeholder="Example: 1234A">
+<button onclick="loadTeam()">Search</button>
+
+<div id="output"></div>
+
+<script>
+async function loadTeam() {
+  const team = document.getElementById("teamInput").value.trim();
+  const out = document.getElementById("output");
+  out.innerHTML = "<p>Loading…</p>";
+
+  try {
+    const teamRes = await fetch(
+      `https://www.robotevents.com/api/v2/teams?number=${team}`
+    );
+    const teamData = await teamRes.json();
+
+    if (!teamData.data.length) {
+      out.innerHTML = "<p>Team not found.</p>";
+      return;
+    }
+
+    const teamId = teamData.data[0].id;
+
+    const matchesRes = await fetch(
+      `https://www.robotevents.com/api/v2/teams/${teamId}/matches`
+    );
+    const matchesData = await matchesRes.json();
+
+    let wins = 0;
+    let losses = 0;
+    let partners = {};
+
+    matchesData.data.forEach(m => {
+      const isWin = m.alliances.some(a =>
+        a.teams.some(t => t.team.id === teamId) && a.score > 0 &&
+        a.score === Math.max(...m.alliances.map(x => x.score))
+      );
+
+      if (isWin) wins++;
+      else losses++;
+
+      m.alliances.forEach(a => {
+        a.teams.forEach(t => {
+          if (t.team.id !== teamId) {
+            partners[t.team.number] = (partners[t.team.number] || 0) + 1;
+          }
+        });
+      });
+    });
+
+    const total = wins + losses;
+    const winRate = total ? ((wins / total) * 100).toFixed(1) : 0;
+
+    const ytBase = "https://www.youtube.com/results?search_query=";
+    const ytLinks = [
+      `${ytBase}${team}+VEX+Push+Back+robot`,
+      `${ytBase}${team}+VEX+interview`,
+      `${ytBase}${team}+VEX+match`
+    ];
+
+    out.innerHTML = `
+      <div class="card">
+        <h2>Team ${team}</h2>
+        <p>Matches: ${total}</p>
+        <p>Wins: ${wins}</p>
+        <p>Losses: ${losses}</p>
+        <p>Win Rate: ${winRate}%</p>
+      </div>
+
+      <div class="card">
+        <h3>Common Alliance Partners</h3>
+        <ul>
+          ${Object.entries(partners)
+            .sort((a,b)=>b[1]-a[1])
+            .slice(0,5)
+            .map(p => `<li>${p[0]} (${p[1]} matches)</li>`)
+            .join("")}
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Videos</h3>
+        <ul>
+          <li><a target="_blank" href="${ytLinks[0]}">Robot Reveals</a></li>
+          <li><a target="_blank" href="${ytLinks[1]}">Interviews</a></li>
+          <li><a target="_blank" href="${ytLinks[2]}">Match Footage</a></li>
+        </ul>
+      </div>
+    `;
+
+  } catch (err) {
+    out.innerHTML = "<p>Error loading team data.</p>";
+  }
+}
+</script>
+
+</body>
+</html>
