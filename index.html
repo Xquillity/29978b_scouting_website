@@ -58,7 +58,9 @@ async function loadTeam() {
 
   try {
     const teamRes = await fetch(
-      `https://www.robotevents.com/api/v2/teams?number=${team}`
+  `https://api.allorigins.win/raw?url=https://www.robotevents.com/api/v2/teams?number=${team}`
+);
+
     );
     const teamData = await teamRes.json();
 
@@ -70,7 +72,9 @@ async function loadTeam() {
     const teamId = teamData.data[0].id;
 
     const matchesRes = await fetch(
-      `https://www.robotevents.com/api/v2/teams/${teamId}/matches`
+  `https://api.allorigins.win/raw?url=https://www.robotevents.com/api/v2/teams/${teamId}/matches`
+);
+
     );
     const matchesData = await matchesRes.json();
 
